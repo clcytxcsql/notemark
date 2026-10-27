@@ -1,0 +1,8 @@
+# 通用忽略规则（脚手架阶段，后续按实际技术栈补充）
+.DS_Store
+*.log
+node_modules/
+dist/
+build/
+.idea/
+.vscode/
