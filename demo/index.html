@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NoteMark · 星球主界面原型</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: radial-gradient(1200px 800px at 50% -10%, #1e3a8a 0%, #0b1026 55%, #050816 100%); color: #e5e7eb; min-height: 100vh; }
+  #app { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #94a3b8; font-size: 14px; margin-bottom: 20px; }
+  .crumbs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 20px; font-size: 14px; }
+  .crumbs button { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+  .crumbs button.current { background: #2563eb; border-color: #2563eb; }
+  .planet-wrap { display: flex; flex-direction: column; align-items: center; margin: 12px 0 24px; }
+  .planet { width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle at 32% 30%, #bae6fd 0%, #38bdf8 35%, #1d4ed8 65%, #0f172a 100%); box-shadow: 0 0 60px rgba(56,189,248,.55), inset -18px -22px 40px rgba(0,0,0,.45); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; font-size: 20px; font-weight: 700; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.5); }
+  .planet small { display: block; font-size: 13px; font-weight: 400; opacity: .85; margin-top: 6px; }
+  h2 { font-size: 16px; margin: 24px 0 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .card { background: rgba(30,41,59,.85); border: 1px solid #334155; border-radius: 12px; padding: 12px; cursor: pointer; }
+  .card:hover { border-color: #38bdf8; }
+  .card .t { font-size: 12px; color: #7dd3fc; }
+  .card .n { margin-top: 4px; word-break: break-all; }
+  .mark { display: flex; gap: 8px; margin-bottom: 8px; }
+  .mark button { flex: 1; text-align: left; background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.5); color: #fcd34d; border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+  .addmark { display: flex; gap: 8px; margin-top: 10px; }
+  .addmark input { flex: 1; background: #0f172a; border: 1px solid #334155; color: #e5e7eb; border-radius: 10px; padding: 10px 12px; }
+  .addmark button, .back { background: #2563eb; color: #fff; border: 0; border-radius: 10px; padding: 10px 16px; cursor: pointer; }
+  .preview { margin-top: 16px; background: #0f172a; border: 1px dashed #475569; border-radius: 12px; padding: 14px; color: #cbd5e1; font-size: 14px; }
+  .empty { color: #94a3b8; font-size: 14px; }
+  .foot { margin-top: 28px; color: #64748b; font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>NoteMark · 星球主界面原型</h1>
+  <p class="sub">演示数据，非真实文件。浏览器直接打开即可运行，无需安装打包。</p>
+
+  <div class="crumbs">
+    <template v-for="(id, i) in stack" :key="id">
+      <span v-if="i">›</span>
+      <button :class="{current: i === stack.length - 1}" @click="jump(i)">{{ planets[id].name }}</button>
+    </template>
+  </div>
+
+  <div class="planet-wrap">
+    <div class="planet">{{ current.name }}<small>学习主题 · 下方是文件和标记</small></div>
+  </div>
+
+  <button class="back" v-if="stack.length > 1" @click="goBack">← 返回上一层星球</button>
+
+  <h2>这个星球里的文件</h2>
+  <div class="grid" v-if="current.files.length">
+    <div class="card" v-for="f in current.files" :key="f.name" @click="preview = f">
+      <div class="t">{{ typeLabel(f.type) }}</div>
+      <div class="n">{{ f.name }}</div>
+    </div>
+  </div>
+  <p class="empty" v-else>这个星球还没有文件。</p>
+
+  <div class="preview" v-if="preview">正在预览：{{ preview.name }}（演示占位，接入真实文件后这里显示实际内容）</div>
+
+  <h2>不会的知识点（标记）</h2>
+  <div v-if="current.marks.length">
+    <div class="mark" v-for="m in current.marks" :key="m.label">
+      <button @click="enterMark(m)">{{ m.label }} → 进入子星球</button>
+    </div>
+  </div>
+  <p class="empty" v-else>还没有标记，遇到不会的点可以在下面添加。</p>
+
+  <div class="addmark">
+    <input v-model="newMark" placeholder="输入不会的知识点，例如：依赖注入还是不懂" @keyup.enter="addMark">
+    <button @click="addMark">添加标记并进入新星球</button>
+  </div>
+
+  <p class="foot">NoteMark 原型 · 星球可以一层层嵌套：标记 → 子星球 → 再标记 → 下一层星球</p>
+</div>
+
+<script>
+const { createApp, ref, computed } = Vue;
+createApp({
+  setup() {
+    const planets = ref({
+      root: { name: 'Java 后端学习星球', files: [
+        { name: 'Spring Boot 入门.md', type: 'md' },
+        { name: '课程讲解.mp4', type: 'video' },
+        { name: '课件.pdf', type: 'pdf' },
+        { name: '架构图.png', type: 'image' },
+      ], marks: [
+        { label: 'IOC 容器不太懂', target: 'ioc' },
+        { label: 'AOP 概念模糊', target: 'aop' },
+      ]},
+      ioc: { name: 'IOC 容器星球', files: [
+        { name: 'IOC 原理讲解.md', type: 'md' },
+        { name: 'IOC 演示视频.mp4', type: 'video' },
+        { name: '容器图解.png', type: 'image' },
+      ], marks: [
+        { label: '依赖注入还是不懂', target: 'di' },
+      ]},
+      di: { name: '依赖注入星球', files: [
+        { name: '依赖注入详解.pdf', type: 'pdf' },
+        { name: '示例代码.md', type: 'md' },
+      ], marks: [] },
+      aop: { name: 'AOP 星球', files: [
+        { name: 'AOP 概念.pdf', type: 'pdf' },
+        { name: '切面演示.mp4', type: 'video' },
+      ], marks: [
+        { label: '切点表达式不会写', target: 'pointcut' },
+      ]},
+      pointcut: { name: '切点表达式星球', files: [
+        { name: '切点表达式手册.md', type: 'md' },
+      ], marks: [] },
+    });
+    const stack = ref(['root']);
+    const preview = ref(null);
+    const newMark = ref('');
+    let seq = 0;
+    const current = computed(() => planets.value[stack.value[stack.value.length - 1]]);
+    function typeLabel(t) {
+      return { md: 'Markdown', pdf: 'PDF', video: '视频', image: '图片' }[t] || t;
+    }
+    function enterMark(m) {
+      if (planets.value[m.target]) { stack.value.push(m.target); preview.value = null; }
+    }
+    function addMark() {
+      const label = newMark.value.trim();
+      if (!label) return;
+      const id = 'custom' + (seq++);
+      planets.value[id] = { name: label, files: [], marks: [] };
+      current.value.marks.push({ label, target: id });
+      newMark.value = '';
+      stack.value.push(id);
+      preview.value = null;
+    }
+    function goBack() { if (stack.value.length > 1) { stack.value.pop(); preview.value = null; } }
+    function jump(i) { stack.value = stack.value.slice(0, i + 1); preview.value = null; }
+    return { planets, stack, current, preview, newMark, typeLabel, enterMark, addMark, goBack, jump };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
